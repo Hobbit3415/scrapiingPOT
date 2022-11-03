@@ -10,9 +10,13 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import ElementClickInterceptedException
 import time
 import os
 import pandas as pd
+from selenium.webdriver.chrome.options import Options 
 # import wget
 
 # Funciones
@@ -44,6 +48,35 @@ def driver_f(url, xPath):
     # Cierra el navegador
     return lista
 
+
+# In[]
+
+options = Options()
+options.add_argument("--disable-notifications")
+
+# Instancia de un webdriver con el servicio de Chrome
+driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
+wait = WebDriverWait(driver, 20)
+# Abre un navegador de GoogleChrome y carga la URL solicitada
+# Carga por completo todos los scripts del sitio web y descarga
+# el HTML conn el contenido dinamico
+url = "https://mapasyestadisticas-cundinamarca-map.opendata.arcgis.com/search?collection=Dataset&type=file%20geodatabase"
+driver.get(url)
+# Duerme el hilo por 6 segundos para asegurarse de que todo el
+# contenido dinamico se cargue completamente
+time.sleep(6)
+
+############
+# for i in range(0,int(569/20)+1):
+for i in range(0,3):
+    try:
+        showmore_link = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="ember106"]/button[1]')))
+        showmore_link.click()
+    
+    except ElementClickInterceptedException:
+        print("Trying to click on the button again")
+        driver.execute_script("arguments[0].click()", showmore_link)
+
 # In[]
 
 names = ['Titulo', 'Enlace']  #Nombres de las columnas
@@ -72,10 +105,11 @@ for i in listaLi:
     # Almacenar cada cola/titulo
     # listaTitles.append(normalise(os.path.split(i.find_element(By.TAG_NAME, "a").get_attribute('href'))[-1].replace('-',' '))) 
     df2['Titulo'] = [(normalise(os.path.split(i.find_element(By.TAG_NAME, "a").get_attribute('href'))[-1].replace('-',' ')))]
-    listaTitles.append(normalise(os.path.split(i.find_element(By.TAG_NAME, "a").get_attribute('href'))[-1].replace('-',' '))) 
+    # listaTitles.append(normalise(os.path.split(i.find_element(By.TAG_NAME, "a").get_attribute('href'))[-1].replace('-',' '))) 
     listaDiv = driver_f(i.find_element(By.TAG_NAME, "a").get_attribute('href'),'//*[@id="main-region"]/div[1]/div[3]/div[2]')
     # Almacenar cada link en una lista para realizar scraping a cada uno
     df2['Enlace'] = [(listaDiv.find_element(By.TAG_NAME, "a").get_attribute('href'))]
     # listaLinks.append(listaDiv.find_element(By.TAG_NAME, "a").get_attribute('href'))
     df = df.append(df2, ignore_index=True)
     
+ 
