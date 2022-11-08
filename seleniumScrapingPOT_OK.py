@@ -13,10 +13,10 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import ElementClickInterceptedException
+from selenium.webdriver.chrome.options import Options
 import time
 import os
-import pandas as pd
-from selenium.webdriver.chrome.options import Options 
+import pandas as pd 
 # import wget
 
 # Funciones
@@ -26,7 +26,8 @@ def normalise(s):
         ("%C3%B3", "ó"),
         ("%C3%A1", "á"),
         ("%C3%AD", "í"),
-        ("%C3%B1", "ñ")
+        ("%C3%B1", "ñ"),
+        ('%C3%A9','é')
     )
     for a, b in replacements:
         s = s.replace(a, b).replace(a.upper(), b.upper())
@@ -41,60 +42,77 @@ def driver_f(url, xPath):
     driver.get(url)
     # Duerme el hilo por 15 segundos para asegurarse de que todo el
     # contenido dinamico se cargue completamente
-    time.sleep(15)
+    time.sleep(25)
     # Lista que almacena el contenido de la etiqueta UL
     # XPATH del UL que almacena todos los resultados
-    lista = driver.find_element(By.XPATH, xPath)
+    wait = WebDriverWait(driver, 30)
+    # driver.implicitly_wait(30)
+    try:
+        lista = wait.until(EC.element_to_be_clickable((By.XPATH, xPath)))
+        lista.click()
+    except ElementClickInterceptedException:
+        print("Trying to click on the button again")
+        driver_.execute_script("arguments[0].click()", lista)
+        
+    # lista = driver.find_element(By.XPATH, xPath)
+    time.sleep(5)
     # Cierra el navegador
+    # driver.quit()
     return lista
+
+url = "https://mapasyestadisticas-cundinamarca-map.opendata.arcgis.com/search?collection=Dataset&type=file%20geodatabase"
 
 
 # In[]
 
 options = Options()
 options.add_argument("--disable-notifications")
+options.add_argument("enable-automation")
+options.add_argument("--headless")
+options.add_argument("--window-size=1920,1080")
+options.add_argument("--no-sandbox")
+options.add_argument("--disable-extensions")
+options.add_argument("--dns-prefetch-disable")
+options.add_argument("--disable-gpu")
 
 # Instancia de un webdriver con el servicio de Chrome
-driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
-wait = WebDriverWait(driver, 20)
+driver_ = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
+
 # Abre un navegador de GoogleChrome y carga la URL solicitada
 # Carga por completo todos los scripts del sitio web y descarga
 # el HTML conn el contenido dinamico
-url = "https://mapasyestadisticas-cundinamarca-map.opendata.arcgis.com/search?collection=Dataset&type=file%20geodatabase"
-driver.get(url)
-# Duerme el hilo por 6 segundos para asegurarse de que todo el
+driver_.get(url)
+# Duerme el hilo por 10 segundos para asegurarse de que todo el
 # contenido dinamico se cargue completamente
-time.sleep(6)
+time.sleep(10)
 
-############
-# for i in range(0,int(569/20)+1):
-for i in range(0,3):
+wait = WebDriverWait(driver_, 20)
+
+for i in range(0,40):
     try:
         showmore_link = wait.until(EC.element_to_be_clickable((By.XPATH, '//*[@id="ember106"]/button[1]')))
         showmore_link.click()
-    
     except ElementClickInterceptedException:
         print("Trying to click on the button again")
-        driver.execute_script("arguments[0].click()", showmore_link)
+        driver_.execute_script("arguments[0].click()", showmore_link)
+    except EC.StaleElementReferenceException:
+        print('Botón no encontrado')
 
-# In[]
+# XPATH del UL que almacena todos los resultados
+xPath = '//*[@id="search-results"]'
+
+# Lista que almacena el contenido de la etiqueta UL
+listaUl = driver_.find_element(By.XPATH, xPath)
+
+# Lista que almacena el contenido del primer div de cada elemento
+# "li". El div tiene como id 'emberXXX' e implementa la clase
+# "search-result"
+listaLi = listaUl.find_elements(By.CLASS_NAME, "search-result")
 
 names = ['Titulo', 'Enlace']  #Nombres de las columnas
 
 df = pd.DataFrame()
 df = pd.DataFrame(columns=names)
-
-#######
-# URL para objetos de tipo GeoDatabase
-listaUl = driver_f('https://mapasyestadisticas-cundinamarca-map.opendata.arcgis.com/search?collection=Dataset&type=file%20geodatabase','//*[@id="search-results"]')
-
-listaLi = listaUl.find_elements(By.CLASS_NAME, "search-result")    
-
-# Lista en la que se guardan los links obtenidos
-listaLinks = []
-
-# Lista en la que se guardan los titulos
-listaTitles = []
 
 for i in listaLi:
     # Busque el tag "a" e imprima su atributo 'href' (link) buscado
@@ -111,5 +129,5 @@ for i in listaLi:
     df2['Enlace'] = [(listaDiv.find_element(By.TAG_NAME, "a").get_attribute('href'))]
     # listaLinks.append(listaDiv.find_element(By.TAG_NAME, "a").get_attribute('href'))
     df = df.append(df2, ignore_index=True)
-    
+       
  
