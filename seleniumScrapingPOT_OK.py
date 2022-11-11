@@ -18,8 +18,8 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support.relative_locator import locate_with
 from webdriver_manager.chrome import ChromeDriverManager
+from selenium.common.exceptions import NoSuchElementException
 
 # import wget
 
@@ -78,6 +78,65 @@ def driver_f(url, xPath):
     # Cierra el navegador
     # driver.quit()
     return lista
+
+
+def check_exists_by_xpath(driver, xpath):
+    """
+    Metodo que recibe como aprametro un XPATH a buscar
+
+    Return:
+        True si el elemento existe
+        False si el elemento no existe
+    """
+    try:
+
+        wait = WebDriverWait(driver, timeout=7)
+        # wait.until(EC.element_to_be_clickable((By.XPATH, xpath)))
+        # driver.find_element(By.XPATH, xpath)
+
+        wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
+
+
+        # driver.implicitly_wait(6)
+    except NoSuchElementException:
+        return False
+    return True
+
+
+def seekLink(web_element, xpath):
+    """
+    Metodo que recibe como parametro un web element, busca etiquetas
+    'a' dentro del mismo y retorna la URL correspondiente a esa etiqueta
+
+    Params:
+    web_element : Tipo web_element
+    """
+
+    link_pagina = web_element.find_element(
+        By.TAG_NAME, "a").get_attribute('href')
+
+    driver = open_driver(link_pagina)
+
+    if check_exists_by_xpath(driver, xpath):
+        div = driver.find_element(By.XPATH, xpath)
+        enlace = div.find_element(By.TAG_NAME, "a").get_attribute('href')
+
+        print(div)
+        print(enlace)
+
+    else:
+        print("Elemento no encontrado")
+        # Intentar con el XPATH que tiene el 4
+        div = driver.find_element(
+            By.XPATH, '//*[@id="main-region"]/div[1]/div[4]/div[2]')
+        enlace = div.find_element(By.TAG_NAME, "a").get_attribute('href')
+
+    # a_locator = driver.find_elements(locate_with(By.TAG_NAME, 'a').below(div))
+
+    # enlace = a_locator.find_element(By.TAG_NAME, "a").get_attribute('href')
+
+    # print("Encontrado: \n{}\n{}".format(titulo, enlace))
+    # return enlace
 
 
 url = "https://mapasyestadisticas-cundinamarca-map.opendata.arcgis.com/search?collection=Dataset&type=file%20geodatabase"
@@ -199,36 +258,6 @@ df_ = pd.DataFrame(columns=names2)
 # Titulos_dup.to_clipboard()
 
 # df.to_clipboard()
-# In[]
-
-
-def seekLink(web_element, xpath):
-    """
-    Metodo que recibe como parametro un web element, busca etiquetas
-    'a' dentro del mismo y retorna la URL correspondiente a esa etiqueta
-
-    Params:
-    web_element : Tipo web_element
-    """
-
-    link_pagina = web_element.find_element(
-        By.TAG_NAME, "a").get_attribute('href')
-
-    driver = open_driver(link_pagina)
-
-    div = driver.find_element(By.XPATH, xpath)
-
-    enlace = div.find_element(By.TAG_NAME, "a").get_attribute('href')
-
-    print(div)
-    print(enlace)
-
-    # a_locator = driver.find_elements(locate_with(By.TAG_NAME, 'a').below(div))
-
-    # enlace = a_locator.find_element(By.TAG_NAME, "a").get_attribute('href')
-
-    # print("Encontrado: \n{}\n{}".format(titulo, enlace))
-    # return enlace
 
 
 # In[]
@@ -238,19 +267,11 @@ for i in range(62, len(Titulos_dup)):
         print(Titulos_dup[i])
         df3 = pd.DataFrame(columns=names2)
         df3['Titulo'] = [df.iloc[i]['Titulo']]
-        # df3['Enlace'] = seekLink(df.iloc[i]["WebElement"])
-        seekLink(df.iloc[i]["WebElement"],
-                 '//*[@id="main-region"]/div[1]/div[3]/div[2]')
-
-        # listaDiv = driver_f((df.iloc[i]['WebElement']).find_element(
-        #     By.TAG_NAME, "a").get_attribute('href'), '//*[@id="main-region"]/div[1]/div[3]/div[2]')
-
-        # listaDiv = driver_f((df.iloc[i]['WebElement']).find_element(
-        #         By.TAG_NAME, "a").get_attribute('href'), '//*[@id="main-region"]/div[1]/div[4]/div[2]')
-
-        # df3['Enlace'] = [(listaDiv.find_element(
-        #     By.TAG_NAME, "a").get_attribute('href'))]
-        # # df_ = df_.append(df3, ignore_index=True)
+        df3["Enlace"] = seekLink(df.iloc[i]["WebElement"],
+                                 '//*[@id="main-region"]/div[1]/div[3]/div[2]')
         df_ = pd.concat([df_, df3], ignore_index=True)
+
+# In[]
+df.to_clipboard()
 
 # %%
