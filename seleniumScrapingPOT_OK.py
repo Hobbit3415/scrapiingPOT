@@ -8,18 +8,16 @@ Created on Wed Nov  2 18:44:40 2022
 # In[]
 import os
 import time
-
 import pandas as pd
 from selenium import webdriver
-from selenium.common.exceptions import (ElementClickInterceptedException,
-                                        TimeoutException)
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
+from selenium.common.exceptions import ElementClickInterceptedException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
-from webdriver_manager.chrome import ChromeDriverManager
 from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.firefox.options import Options
+from webdriver_manager.firefox import GeckoDriverManager
+from selenium.webdriver.firefox.service import Service
 
 # import wget
 
@@ -42,7 +40,8 @@ def normalise(s):
 
 def open_driver(url):
     # Instancia de un webdriver con el servicio de Chrome
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()))
+    # driver = webdriver.Firefox(GeckoDriverManager().install())
+    driver = webdriver.Firefox(service=Service(GeckoDriverManager().install()))
     # Abre un navegador de GoogleChrome y carga la URL solicitada
     # Carga por completo todos los scripts del sitio web y descarga
     # el HTML conn el contenido dinamico
@@ -90,16 +89,21 @@ def check_exists_by_xpath(driver, xpath):
     """
     try:
 
-        wait = WebDriverWait(driver, timeout=7)
+        # wait = WebDriverWait(driver, timeout=7)
         # wait.until(EC.element_to_be_clickable((By.XPATH, xpath)))
-        # driver.find_element(By.XPATH, xpath)
 
-        wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
+        driver.find_element(By.XPATH, xpath)
+        # if len(driver.find_elements(By.XPATH, xpath)) > 0:
+        # return True
+        # else:
+        #     return False
+        # wait.until(EC.visibility_of_element_located((By.XPATH, xpath)))
 
+        driver.implicitly_wait(6)
 
-        # driver.implicitly_wait(6)
     except NoSuchElementException:
         return False
+
     return True
 
 
@@ -126,41 +130,21 @@ def seekLink(web_element, xpath):
 
     else:
         print("Elemento no encontrado")
+        print("Intentando con el XPATH con 4")
         # Intentar con el XPATH que tiene el 4
         div = driver.find_element(
-            By.XPATH, '//*[@id="main-region"]/div[1]/div[4]/div[2]')
+            By.XPATH, '/html/body/div[7]/div[2]/div/div[1]/div[3]/div/div[1]/div[4]/div[2]')
         enlace = div.find_element(By.TAG_NAME, "a").get_attribute('href')
 
-    # a_locator = driver.find_elements(locate_with(By.TAG_NAME, 'a').below(div))
+        print(div)
+        print(enlace)
 
-    # enlace = a_locator.find_element(By.TAG_NAME, "a").get_attribute('href')
-
-    # print("Encontrado: \n{}\n{}".format(titulo, enlace))
-    # return enlace
+    driver.close()
 
 
 url = "https://mapasyestadisticas-cundinamarca-map.opendata.arcgis.com/search?collection=Dataset&type=file%20geodatabase"
 
 url_individual = "https://mapasyestadisticas-cundinamarca-map.opendata.arcgis.com/datasets/cartografia-basica-municipio-de-gachancip%C3%A1-escala-1k-2020-gdb/about"
-
-# In[]
-# Probando individualemente enlace que da problemas
-
-# url_individual = "https://mapasyestadisticas-cundinamarca-map.opendata.arcgis.com/datasets/cartografia-basica-municipio-de-gachancip%C3%A1-escala-1k-2020-gdb/about"
-
-# driver_ = webdriver.Chrome(service=Service(
-#     ChromeDriverManager().install()))
-
-# driver_.get(url_individual)
-
-# time.sleep(6)
-
-# # wait = WebDriverWait(driver_, 40)
-
-# elemento = driver_.find_element(
-#     By.XPATH, '//*[@id="main-region"]/div[1]/div[4]/div[2]').find_element(By.TAG_NAME, "a").get_attribute('href')
-
-# print(elemento)
 
 
 # In[]
@@ -169,15 +153,14 @@ options = Options()
 options.add_argument("--disable-notifications")
 options.add_argument("enable-automation")
 options.add_argument("--headless")
-options.add_argument("--window-size=1920,1080")
+options.add_argument("--window-size=800,600")
 options.add_argument("--no-sandbox")
 options.add_argument("--disable-extensions")
 options.add_argument("--dns-prefetch-disable")
 # options.add_argument("--disable-gpu")
 
-# Instancia de un webdriver con el servicio de Chrome
-driver_ = webdriver.Chrome(service=Service(
-    ChromeDriverManager().install()), options=options)
+driver_ = webdriver.Firefox(service=Service(
+    GeckoDriverManager().install()), options=options)
 
 # Abre un navegador de GoogleChrome y carga la URL solicitada
 # Carga por completo todos los scripts del sitio web y descarga
@@ -251,24 +234,15 @@ df_ = pd.DataFrame()
 df_ = pd.DataFrame(columns=names2)
 
 # In[]
-
-# Celda para copiar df a portapapeles y visualizarlos mejor en excel
-# print(Titulos_dup)
-# print(df)
-# Titulos_dup.to_clipboard()
-
-# df.to_clipboard()
-
-
-# In[]
-for i in range(62, len(Titulos_dup)):
+for i in range(0, len(Titulos_dup)):
     if Titulos_dup[i] == False:
         print(i)
         print(Titulos_dup[i])
         df3 = pd.DataFrame(columns=names2)
         df3['Titulo'] = [df.iloc[i]['Titulo']]
         df3["Enlace"] = seekLink(df.iloc[i]["WebElement"],
-                                 '//*[@id="main-region"]/div[1]/div[3]/div[2]')
+                                 '/html/body/div[7]/div[2]/div/div[1]/div[3]/div/div[1]/div[3]/div[2]')
+
         df_ = pd.concat([df_, df3], ignore_index=True)
 
 # In[]
