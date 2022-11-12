@@ -23,6 +23,8 @@ from selenium.webdriver.firefox.service import Service
 
 # Funciones
 
+os.environ['GH_TOKEN'] = "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"
+
 
 def normalise(s):
     replacements = (
@@ -39,16 +41,26 @@ def normalise(s):
 
 
 def open_driver(url):
+
+    options = Options()
+    options.add_argument("--disable-notifications")
+    options.add_argument("enable-automation")
+    options.add_argument("--headless")
+    options.add_argument("--window-size=800,600")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-extensions")
+    options.add_argument("--dns-prefetch-disable")
     # Instancia de un webdriver con el servicio de Chrome
     # driver = webdriver.Firefox(GeckoDriverManager().install())
-    driver = webdriver.Firefox(service=Service(GeckoDriverManager().install()))
+    driver = webdriver.Firefox(service=Service(
+        GeckoDriverManager().install()), options=options)
     # Abre un navegador de GoogleChrome y carga la URL solicitada
     # Carga por completo todos los scripts del sitio web y descarga
     # el HTML conn el contenido dinamico
     driver.get(url)
     # Duerme el hilo por 10 segundos para asegurarse de que todo el
     # contenido dinamico se cargue completamente
-    time.sleep(10)
+    time.sleep(6)
 
     return driver
 
@@ -64,7 +76,7 @@ def driver_f(url, xPath):
 
     # Lista que almacena el contenido de la etiqueta UL
     # XPATH del UL que almacena todos los resultados
-    wait = WebDriverWait(driver, 20)
+    wait = WebDriverWait(driver, 6)
     # driver.implicitly_wait(30)
     try:
         lista = wait.until(EC.element_to_be_clickable((By.XPATH, xPath)))
@@ -123,10 +135,11 @@ def seekLink(web_element, xpath):
 
     if check_exists_by_xpath(driver, xpath):
         div = driver.find_element(By.XPATH, xpath)
+        print("Elemento encontrado")
         enlace = div.find_element(By.TAG_NAME, "a").get_attribute('href')
-
         print(div)
         print(enlace)
+        return enlace
 
     else:
         print("Elemento no encontrado")
@@ -138,6 +151,7 @@ def seekLink(web_element, xpath):
 
         print(div)
         print(enlace)
+        return enlace
 
     driver.close()
 
@@ -170,7 +184,7 @@ driver_.get(url)
 # contenido dinamico se cargue completamente
 time.sleep(10)
 
-wait = WebDriverWait(driver_, 20)
+wait = WebDriverWait(driver_, 10)
 
 # In[]
 # Clickando boton de showmore
@@ -234,16 +248,17 @@ df_ = pd.DataFrame()
 df_ = pd.DataFrame(columns=names2)
 
 # In[]
-for i in range(0, len(Titulos_dup)):
-    if Titulos_dup[i] == False:
-        print(i)
-        print(Titulos_dup[i])
-        df3 = pd.DataFrame(columns=names2)
-        df3['Titulo'] = [df.iloc[i]['Titulo']]
-        df3["Enlace"] = seekLink(df.iloc[i]["WebElement"],
-                                 '/html/body/div[7]/div[2]/div/div[1]/div[3]/div/div[1]/div[3]/div[2]')
+for i in range(46, len(Titulos_dup)):
+    # if Titulos_dup[i] == False:
+    print(i)
+    print(Titulos_dup[i])
+    df3 = pd.DataFrame(columns=names2)
+    df3['Titulo'] = [df.iloc[i]['Titulo']]
+    df3["Enlace"] = seekLink(df.iloc[i]["WebElement"],
+                             '/html/body/div[7]/div[2]/div/div[1]/div[3]/div/div[1]/div[3]/div[2]')
 
-        df_ = pd.concat([df_, df3], ignore_index=True)
+    print("Elemento agregado a df")
+    df_ = pd.concat([df_, df3], ignore_index=True)
 
 # In[]
 df.to_clipboard()
