@@ -23,7 +23,7 @@ from selenium.webdriver.firefox.service import Service
 
 # Funciones
 
-os.environ['GH_TOKEN'] = "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"
+os.environ['GH_TOKEN'] = ""
 
 
 def normalise(s):
@@ -139,6 +139,7 @@ def seekLink(web_element, xpath):
         enlace = div.find_element(By.TAG_NAME, "a").get_attribute('href')
         print(div)
         print(enlace)
+        driver.close()
         return enlace
 
     else:
@@ -151,9 +152,8 @@ def seekLink(web_element, xpath):
 
         print(div)
         print(enlace)
+        driver.close()
         return enlace
-
-    driver.close()
 
 
 url = "https://mapasyestadisticas-cundinamarca-map.opendata.arcgis.com/search?collection=Dataset&type=file%20geodatabase"
@@ -248,7 +248,11 @@ df_ = pd.DataFrame()
 df_ = pd.DataFrame(columns=names2)
 
 # In[]
-for i in range(46, len(Titulos_dup)):
+print("Dimension titulos dup {}".format(len(Titulos_dup)))
+
+
+# In[]
+for i in range(17, 20):
     # if Titulos_dup[i] == False:
     print(i)
     print(Titulos_dup[i])
@@ -261,6 +265,6 @@ for i in range(46, len(Titulos_dup)):
     df_ = pd.concat([df_, df3], ignore_index=True)
 
 # In[]
-df.to_clipboard()
+df_.to_clipboard()
 
 # %%
