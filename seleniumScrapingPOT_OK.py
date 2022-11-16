@@ -19,10 +19,7 @@ from selenium.webdriver.firefox.options import Options
 from webdriver_manager.firefox import GeckoDriverManager
 from selenium.webdriver.firefox.service import Service
 
-# import wget
-
 # Funciones
-
 os.environ['GH_TOKEN'] = ""
 
 
@@ -46,10 +43,11 @@ def open_driver(url):
     options.add_argument("--disable-notifications")
     options.add_argument("enable-automation")
     options.add_argument("--headless")
-    options.add_argument("--window-size=800,600")
+    options.add_argument("--window-size=600,800")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-extensions")
     options.add_argument("--dns-prefetch-disable")
+
     # Instancia de un webdriver con el servicio de Chrome
     # driver = webdriver.Firefox(GeckoDriverManager().install())
     driver = webdriver.Firefox(service=Service(
@@ -73,7 +71,6 @@ def driver_f(url, xPath):
     Retorna un Web element
     """
     driver = open_driver(url)
-
     # Lista que almacena el contenido de la etiqueta UL
     # XPATH del UL que almacena todos los resultados
     wait = WebDriverWait(driver, 6)
@@ -100,17 +97,7 @@ def check_exists_by_xpath(driver, xpath):
         False si el elemento no existe
     """
     try:
-
-        # wait = WebDriverWait(driver, timeout=7)
-        # wait.until(EC.element_to_be_clickable((By.XPATH, xpath)))
-
         driver.find_element(By.XPATH, xpath)
-        # if len(driver.find_elements(By.XPATH, xpath)) > 0:
-        # return True
-        # else:
-        #     return False
-        # wait.until(EC.visibility_of_element_located((By.XPATH, xpath)))
-
         driver.implicitly_wait(6)
 
     except NoSuchElementException:
@@ -119,19 +106,16 @@ def check_exists_by_xpath(driver, xpath):
     return True
 
 
-def seekLink(web_element, xpath):
+def seekLink(url, xpath):
     """
     Metodo que recibe como parametro un web element, busca etiquetas
     'a' dentro del mismo y retorna la URL correspondiente a esa etiqueta
 
     Params:
-    web_element : Tipo web_element
+    web_element : URL de sitio web
     """
 
-    link_pagina = web_element.find_element(
-        By.TAG_NAME, "a").get_attribute('href')
-
-    driver = open_driver(link_pagina)
+    driver = open_driver(url)
 
     if check_exists_by_xpath(driver, xpath):
         div = driver.find_element(By.XPATH, xpath)
@@ -158,31 +142,13 @@ def seekLink(web_element, xpath):
 
 url = "https://mapasyestadisticas-cundinamarca-map.opendata.arcgis.com/search?collection=Dataset&type=file%20geodatabase"
 
-url_individual = "https://mapasyestadisticas-cundinamarca-map.opendata.arcgis.com/datasets/cartografia-basica-municipio-de-gachancip%C3%A1-escala-1k-2020-gdb/about"
-
-
 # In[]
 # Estableciendo opciones y creando web driver
-options = Options()
-options.add_argument("--disable-notifications")
-options.add_argument("enable-automation")
-options.add_argument("--headless")
-options.add_argument("--window-size=800,600")
-options.add_argument("--no-sandbox")
-options.add_argument("--disable-extensions")
-options.add_argument("--dns-prefetch-disable")
-# options.add_argument("--disable-gpu")
-
-driver_ = webdriver.Firefox(service=Service(
-    GeckoDriverManager().install()), options=options)
 
 # Abre un navegador de GoogleChrome y carga la URL solicitada
 # Carga por completo todos los scripts del sitio web y descarga
 # el HTML conn el contenido dinamico
-driver_.get(url)
-# Duerme el hilo por 10 segundos para asegurarse de que todo el
-# contenido dinamico se cargue completamente
-time.sleep(10)
+driver_ = open_driver(url)
 
 wait = WebDriverWait(driver_, 10)
 
@@ -217,13 +183,14 @@ listaLi = listaUl.find_elements(By.CLASS_NAME, "search-result")
 listaEnlace = []
 
 # Generacion de Dataframe
-names = ['Titulo', 'WebElement']  # Nombres de las columnas
+names = ['Titulo', 'Enlace_web', 'Enlace_recursos']
 
 df = pd.DataFrame()
 df = pd.DataFrame(columns=names)
 
 # In[]
 # Obteniendo URL de cada elemento individual
+
 for i in listaLi:
     print('#######################')
     print((normalise(os.path.split(i.find_element(By.TAG_NAME,
@@ -231,40 +198,38 @@ for i in listaLi:
     print(i)
     # Busque el tag "a" e imprima su atributo 'href' (link) buscado
     df2 = pd.DataFrame(columns=names)
-    # print(i.find_element(By.TAG_NAME, "a").get_attribute('href'))
+
     # Almacenar cada titulo
     df2['Titulo'] = [(normalise(os.path.split(i.find_element(
         By.TAG_NAME, "a").get_attribute('href'))[-1].replace('-', ' ')))]
-    df2['WebElement'] = i
+    # Columna en la que se guardan los links del sitio web donde
+    # se encuentra el recurso que necesitamos
+    df2['Enlace_web'] = i.find_element(By.TAG_NAME, "a").get_attribute('href')
     # df = df.append(df2, ignore_index=True)
     df = pd.concat([df, df2], ignore_index=True)
 
-# Lista que almacena los valores unicos de los titulos
-Titulos_dup = df['Titulo'].duplicated()
+# In[]
+print("\nDataframe hasta el momento")
+print(df)
+df.to_clipboard()
 
-names2 = ['Titulo', 'Enlace']  # Nombres de las columnas
-
-df_ = pd.DataFrame()
-df_ = pd.DataFrame(columns=names2)
+# Cerrar el driver para no consumir mas RAM
+driver_.close()
 
 # In[]
-print("Dimension titulos dup {}".format(len(Titulos_dup)))
 
-
-# In[]
-for i in range(17, 20):
-    # if Titulos_dup[i] == False:
+for i in range(41, df.shape[0]):
     print(i)
-    print(Titulos_dup[i])
-    df3 = pd.DataFrame(columns=names2)
-    df3['Titulo'] = [df.iloc[i]['Titulo']]
-    df3["Enlace"] = seekLink(df.iloc[i]["WebElement"],
-                             '/html/body/div[7]/div[2]/div/div[1]/div[3]/div/div[1]/div[3]/div[2]')
+    print(df.iloc[i])
+    # df = pd.DataFrame(columns=names)
+    # df['Titulo'] = [df.iloc[i]['Titulo']]
+    df["Enlace_recursos"] = seekLink(df.iloc[i]['Enlace_web'],
+                                     '/html/body/div[7]/div[2]/div/div[1]/div[3]/div/div[1]/div[3]/div[2]')
 
     print("Elemento agregado a df")
-    df_ = pd.concat([df_, df3], ignore_index=True)
+    # df = pd.concat([df, df3], ignore_index=True)
 
 # In[]
-df_.to_clipboard()
+df.to_clipboard()
 
 # %%
