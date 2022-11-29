@@ -3,6 +3,7 @@
 Created on Wed Nov  2 18:44:40 2022
 
 @author: apitto
+@author: hobbit3415
 """
 
 # In[]
@@ -19,11 +20,25 @@ from selenium.webdriver.firefox.options import Options
 from webdriver_manager.firefox import GeckoDriverManager
 from selenium.webdriver.firefox.service import Service
 
+from bs4 import BeautifulSoup
+import re
+from lxml import etree
+
 # Funciones
-os.environ['GH_TOKEN'] = ""
+os.environ['GH_TOKEN'] = "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"
 
 
 def normalise(s):
+    """
+    Metodo que normaliza cadenas de strings que contengan
+    caracteres con acentos
+
+    Params:
+        s: String a normalizar
+
+    Return:
+        String normalizado
+    """
     replacements = (
         ("%C3%B3", "ó"),
         ("%C3%A1", "á"),
@@ -38,18 +53,27 @@ def normalise(s):
 
 
 def open_driver(url):
+    """
+    Metodo que recibe una url y crea un web driver
+    al cual se realizará el scraping
 
+    Params:
+        url: string
+
+    Return:
+        webdriver de Firefox
+    """
     options = Options()
     options.add_argument("--disable-notifications")
     options.add_argument("enable-automation")
-    options.add_argument("--headless")
-    options.add_argument("--window-size=600,800")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-extensions")
-    options.add_argument("--dns-prefetch-disable")
+    # options.add_argument("--headless")
+    # options.add_argument('--ignore-certificate-errors')
+    options.add_argument('--incognito')
+    # options.add_argument("--no-sandbox")
+    # options.add_argument("--disable-extensions")
+    # options.add_argument("--dns-prefetch-disable")
 
     # Instancia de un webdriver con el servicio de Chrome
-    # driver = webdriver.Firefox(GeckoDriverManager().install())
     driver = webdriver.Firefox(service=Service(
         GeckoDriverManager().install()), options=options)
     # Abre un navegador de GoogleChrome y carga la URL solicitada
@@ -68,29 +92,39 @@ def driver_f(url, xPath):
     Metodo que recibe una url especifica de una pagina web
     en la que se desea buscar un elemento
 
-    Retorna un Web element
+    Params:
+        url: String
+        xPath: String que contiene un XPATH de un elemento web HTML
+
+    Return:
+        Lista con los web elements encontrados
     """
     driver = open_driver(url)
     # Lista que almacena el contenido de la etiqueta UL
     # XPATH del UL que almacena todos los resultados
     wait = WebDriverWait(driver, 6)
-    # driver.implicitly_wait(30)
     try:
         lista = wait.until(EC.element_to_be_clickable((By.XPATH, xPath)))
         lista.click()
     except ElementClickInterceptedException:
         print("Trying to click on the button again")
         driver_.execute_script("arguments[0].click()", lista)
-    # lista = driver.find_element(By.XPATH, xPath)
+
     time.sleep(5)
-    # Cierra el navegador
-    # driver.quit()
     return lista
 
 
 def check_exists_by_xpath(driver, xpath):
     """
-    Metodo que recibe como aprametro un XPATH a buscar
+    Metodo que verifica que un elemento existe en el sitio
+    web que se está consultando
+
+    Params:
+        driver: Elemento de tipo web driver en donde se realizará
+        la busqueda del elemento
+
+        xpath: String que contiene un XPATH del elemento a buscar
+        en el web driver suministrado
 
     Return:
         True si el elemento existe
@@ -101,43 +135,116 @@ def check_exists_by_xpath(driver, xpath):
         driver.implicitly_wait(6)
 
     except NoSuchElementException:
+        print("Check exist: El elemento NO existe")
         return False
 
+    print("Check exist: El elemento existe")
     return True
 
 
-def seekLink(url, xpath):
+def check_exists_by_css(driver, css):
     """
-    Metodo que recibe como parametro un web element, busca etiquetas
+    Metodo que verifica que un elemento existe en el sitio
+    web que se está consultando
+
+    Params:
+        driver: Elemento de tipo web driver en donde se realizará
+        la busqueda del elemento
+
+        css: String que contiene un Selector CSS del elemento a buscar
+        en el web driver suministrado
+
+    Return:
+        True si el elemento existe
+        False si el elemento no existe
+    """
+    try:
+        driver.find_element(By.CSS_SELECTOR, css)
+        driver.implicitly_wait(6)
+
+    except NoSuchElementException:
+        return False
+
+    print("Check exist: El elemento existe")
+    return True
+
+
+def seekLink(driver, url, xpath):
+    """
+    Metodo que recibe como parametro un web driver, busca etiquetas
     'a' dentro del mismo y retorna la URL correspondiente a esa etiqueta
 
     Params:
-    web_element : URL de sitio web
+    driver: Objeto web_driver
+    url: String del sito en el que se realizará la busqueda
+    xpath: XPATH del elemento a buscar
+
+    Return:
+    Enlace: String con el enlace web encontrado dentro del sitio
     """
 
-    driver = open_driver(url)
+    driver.get(url)
+    time.sleep(10)
 
     if check_exists_by_xpath(driver, xpath):
         div = driver.find_element(By.XPATH, xpath)
-        print("Elemento encontrado")
+        # print("Elemento encontrado")
         enlace = div.find_element(By.TAG_NAME, "a").get_attribute('href')
-        print(div)
-        print(enlace)
-        driver.close()
+        # print(div)
+        # print(enlace)
+        # driver.close()
         return enlace
 
-    else:
-        print("Elemento no encontrado")
+    elif check_exists_by_xpath(driver, '/html/body/div[7]/div[2]/div/div[1]/div[3]/div/div[1]/div[4]/div[2]'):
+        # print("Elemento no encontrado")
         print("Intentando con el XPATH con 4")
         # Intentar con el XPATH que tiene el 4
         div = driver.find_element(
             By.XPATH, '/html/body/div[7]/div[2]/div/div[1]/div[3]/div/div[1]/div[4]/div[2]')
+
         enlace = div.find_element(By.TAG_NAME, "a").get_attribute('href')
 
-        print(div)
-        print(enlace)
-        driver.close()
         return enlace
+
+    else:
+        print("Enlace no encontrado")
+        return ""
+
+
+def scrap_labels(driver, url, xpath):
+    """
+    Metodo que busca las etiquetas de un recurso web
+
+    Params:
+        driver: Objeto web_driver
+        url: String del sito en el que se realizará la busqueda
+        xpath: XPATH del elemento a buscar
+
+    Return:
+        labels: String que contiene todas las etiquetas encontradas
+        y separadas por comas
+    """
+    # Se ingresa a la url en la que se encuentran las etiquetas
+    driver.get(url)
+    # Lista que almacena todas etiquetas relacionadas
+    # con la pagina
+    labels = []
+    if check_exists_by_xpath(driver, xpath):
+        # Se busca el div que contiene las etiquetas
+        div = driver.find_element(By.XPATH, xpath)
+        # Para cada elemento en el div...
+        for element in div.find_elements(By.TAG_NAME, 'li'):
+            # Encuentre el objeto con el TAG 'a' y extraiga el texto
+            etiqueta = element.find_element(
+                By.TAG_NAME, 'a').text
+
+            # Agregue la etiqueta a la lista de etiquetas
+            labels.append(etiqueta)
+
+    # Concatene cada label encontrado y separelo por comas
+    labels = ",".join(labels)
+
+    return labels
 
 
 url = "https://mapasyestadisticas-cundinamarca-map.opendata.arcgis.com/search?collection=Dataset&type=file%20geodatabase"
@@ -145,16 +252,16 @@ url = "https://mapasyestadisticas-cundinamarca-map.opendata.arcgis.com/search?co
 # In[]
 # Estableciendo opciones y creando web driver
 
-# Abre un navegador de GoogleChrome y carga la URL solicitada
+# Abre un navegador de Firefox y carga la URL solicitada
 # Carga por completo todos los scripts del sitio web y descarga
-# el HTML conn el contenido dinamico
+# el HTML con el contenido dinamico
 driver_ = open_driver(url)
 
 wait = WebDriverWait(driver_, 10)
 
 # In[]
 # Clickando boton de showmore
-for i in range(0, 35):
+for i in range(0, 19):
     try:
         showmore_link = wait.until(EC.element_to_be_clickable(
             (By.XPATH, '//*[@id="ember106"]/button[1]')))
@@ -164,6 +271,7 @@ for i in range(0, 35):
         driver_.execute_script("arguments[0].click()", showmore_link)
     except EC.StaleElementReferenceException:
         print('Botón no encontrado')
+
 
 # In[]
 # Iniciando variables
@@ -183,14 +291,13 @@ listaLi = listaUl.find_elements(By.CLASS_NAME, "search-result")
 listaEnlace = []
 
 # Generacion de Dataframe
-names = ['Titulo', 'Enlace_web', 'Enlace_recursos']
+names = ['Titulo', 'Enlace_web', 'Enlace_recursos', 'Etiquetas']
 
 df = pd.DataFrame()
 df = pd.DataFrame(columns=names)
 
 # In[]
-# Obteniendo URL de cada elemento individual
-
+# Obteniendo URL de cada sitio web que contiene el recurso buscado
 for i in listaLi:
     print('#######################')
     print((normalise(os.path.split(i.find_element(By.TAG_NAME,
@@ -213,23 +320,29 @@ print("\nDataframe hasta el momento")
 print(df)
 df.to_clipboard()
 
-# Cerrar el driver para no consumir mas RAM
-driver_.close()
-
 # In[]
-
-for i in range(41, df.shape[0]):
+# Primeros 4 elementos del df
+for i in range(0, 20):
     print(i)
-    print(df.iloc[i])
-    # df = pd.DataFrame(columns=names)
-    # df['Titulo'] = [df.iloc[i]['Titulo']]
-    df["Enlace_recursos"] = seekLink(df.iloc[i]['Enlace_web'],
-                                     '/html/body/div[7]/div[2]/div/div[1]/div[3]/div/div[1]/div[3]/div[2]')
+    # print(df.iloc[i])
+    enlace_web = df.iloc[i]['Enlace_web']
+
+    link_recurso = seekLink(
+        driver_, enlace_web, '/html/body/div[7]/div[2]/div/div[1]/div[3]/div/div[1]/div[3]/div[2]')
+
+    etiquetas = scrap_labels(
+        driver_, enlace_web, "/html/body/div[7]/div[2]/div/div[1]/div[3]/div/div[3]/div/div/div[3]/div[3]/ul")
+
+    # Se anexa el enlace al recurso solicitado
+    df.loc[i, 'Enlace_recursos'] = link_recurso
+    # Se anexa las etiquetas correspondientes a cada recurso
+    df.loc[i, 'Etiquetas'] = etiquetas
 
     print("Elemento agregado a df")
-    # df = pd.concat([df, df3], ignore_index=True)
+
 
 # In[]
 df.to_clipboard()
+
 
 # %%
