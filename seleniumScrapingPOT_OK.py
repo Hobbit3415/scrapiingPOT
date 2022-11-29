@@ -25,7 +25,7 @@ import re
 from lxml import etree
 
 # Funciones
-os.environ['GH_TOKEN'] = "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"
+os.environ['GH_TOKEN'] = ""
 
 
 def normalise(s):
