@@ -11,21 +11,28 @@ import os
 import time
 import pandas as pd
 from selenium import webdriver
-from selenium.common.exceptions import ElementClickInterceptedException
+from selenium.common.exceptions import ElementClickInterceptedException, TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import NoSuchElementException
-from selenium.webdriver.firefox.options import Options
-from webdriver_manager.firefox import GeckoDriverManager
+
+# Bibliotecas webdriver Firefox
+from selenium.webdriver.firefox.options import Options as op_firefox
 from selenium.webdriver.firefox.service import Service
+from webdriver_manager.firefox import GeckoDriverManager
+
+# Bibliotecas webdriver Chrome
+from selenium.webdriver.chrome.options import Options as op_chrome
+from selenium.webdriver.chrome.service import Service
+from webdriver_manager.chrome import ChromeDriverManager
 
 from bs4 import BeautifulSoup
 import re
 from lxml import etree
 
 # Funciones
-os.environ['GH_TOKEN'] = ""
+os.environ['GH_TOKEN'] = "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"
 
 
 def normalise(s):
@@ -52,7 +59,7 @@ def normalise(s):
     return s
 
 
-def open_driver(url):
+def open_driver_firefox(url):
     """
     Metodo que recibe una url y crea un web driver
     al cual se realizará el scraping
@@ -63,19 +70,54 @@ def open_driver(url):
     Return:
         webdriver de Firefox
     """
-    options = Options()
+    options = op_firefox()
     options.add_argument("--disable-notifications")
     options.add_argument("enable-automation")
-    # options.add_argument("--headless")
-    # options.add_argument('--ignore-certificate-errors')
-    options.add_argument('--incognito')
+    options.add_argument("--headless")
+    options.add_argument('--ignore-certificate-errors')
+    # options.add_argument('--incognito')
     # options.add_argument("--no-sandbox")
-    # options.add_argument("--disable-extensions")
-    # options.add_argument("--dns-prefetch-disable")
+    options.add_argument("--disable-extensions")
+    options.add_argument("--dns-prefetch-disable")
 
     # Instancia de un webdriver con el servicio de Chrome
     driver = webdriver.Firefox(service=Service(
         GeckoDriverManager().install()), options=options)
+    # Abre un navegador de GoogleChrome y carga la URL solicitada
+    # Carga por completo todos los scripts del sitio web y descarga
+    # el HTML conn el contenido dinamico
+    driver.get(url)
+    # Duerme el hilo por 10 segundos para asegurarse de que todo el
+    # contenido dinamico se cargue completamente
+    time.sleep(6)
+
+    return driver
+
+
+def open_driver_chrome(url):
+    """
+    Metodo que recibe una url y crea un web driver
+    al cual se realizará el scraping
+
+    Params:
+        url: string
+
+    Return:
+        webdriver de Chrome
+    """
+    options = op_chrome()
+    options.add_argument("--disable-notifications")
+    # options.add_argument("enable-automation")
+    # options.add_argument("--headless")
+    # options.add_argument('--ignore-certificate-errors')
+    # options.add_argument('--incognito')
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-extensions")
+    options.add_argument("--dns-prefetch-disable")
+
+    # Instancia de un webdriver con el servicio de Chrome
+    driver = webdriver.Chrome(service=Service(
+        ChromeDriverManager().install()), options=options)
     # Abre un navegador de GoogleChrome y carga la URL solicitada
     # Carga por completo todos los scripts del sitio web y descarga
     # el HTML conn el contenido dinamico
@@ -99,7 +141,7 @@ def driver_f(url, xPath):
     Return:
         Lista con los web elements encontrados
     """
-    driver = open_driver(url)
+    driver = open_driver_firefox(url)
     # Lista que almacena el contenido de la etiqueta UL
     # XPATH del UL que almacena todos los resultados
     wait = WebDriverWait(driver, 6)
@@ -131,8 +173,12 @@ def check_exists_by_xpath(driver, xpath):
         False si el elemento no existe
     """
     try:
+        # driver.implicitly_wait(6)
         driver.find_element(By.XPATH, xpath)
-        driver.implicitly_wait(6)
+
+    except TimeoutException:
+        print("Check exist: Timeout Exeption")
+        return False
 
     except NoSuchElementException:
         print("Check exist: El elemento NO existe")
@@ -162,6 +208,10 @@ def check_exists_by_css(driver, css):
         driver.find_element(By.CSS_SELECTOR, css)
         driver.implicitly_wait(6)
 
+    except TimeoutException:
+        print("Check exist: Timeout Exeption")
+        return False
+
     except NoSuchElementException:
         return False
 
@@ -182,11 +232,18 @@ def seekLink(driver, url, xpath):
     Return:
     Enlace: String con el enlace web encontrado dentro del sitio
     """
+    try:
+        driver.get(url)
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, xpath)))
 
-    driver.get(url)
-    time.sleep(10)
+    except:
+        print("Imposible abrir web driver...")
+        driver.close()
+        return ""
 
     if check_exists_by_xpath(driver, xpath):
+        print("Scraping link")
         div = driver.find_element(By.XPATH, xpath)
         # print("Elemento encontrado")
         enlace = div.find_element(By.TAG_NAME, "a").get_attribute('href')
@@ -225,11 +282,13 @@ def scrap_labels(driver, url, xpath):
         y separadas por comas
     """
     # Se ingresa a la url en la que se encuentran las etiquetas
-    driver.get(url)
+    # driver.get(url)
+    # time.sleep(7)
     # Lista que almacena todas etiquetas relacionadas
     # con la pagina
     labels = []
     if check_exists_by_xpath(driver, xpath):
+        print("Scraping labels")
         # Se busca el div que contiene las etiquetas
         div = driver.find_element(By.XPATH, xpath)
         # Para cada elemento en el div...
@@ -255,7 +314,7 @@ url = "https://mapasyestadisticas-cundinamarca-map.opendata.arcgis.com/search?co
 # Abre un navegador de Firefox y carga la URL solicitada
 # Carga por completo todos los scripts del sitio web y descarga
 # el HTML con el contenido dinamico
-driver_ = open_driver(url)
+driver_ = open_driver_firefox(url)
 
 wait = WebDriverWait(driver_, 10)
 
@@ -318,22 +377,37 @@ for i in listaLi:
 # In[]
 print("\nDataframe hasta el momento")
 print(df)
+
+# Ordenar dataset por nombre
+# df = df.sort_values(by=["Titulo"])
+
 df.to_clipboard()
+
+# Se cierra el Webdriver de Firefox
+driver_.quit()
+
+# In[]
+# Se abre un nuevo webdriver pero con Chrome
+driver_ = open_driver_chrome(url)
 
 # In[]
 # Primeros 4 elementos del df
-for i in range(0, 20):
-    print(i)
-    # print(df.iloc[i])
+for i in range(30, len(df)):
+    print(f"\n{i}: {df.loc[i, 'Titulo']}")
+    # print(i)
+
     enlace_web = df.iloc[i]['Enlace_web']
+
+    df.to_clipboard()
 
     link_recurso = seekLink(
         driver_, enlace_web, '/html/body/div[7]/div[2]/div/div[1]/div[3]/div/div[1]/div[3]/div[2]')
 
-    etiquetas = scrap_labels(
-        driver_, enlace_web, "/html/body/div[7]/div[2]/div/div[1]/div[3]/div/div[3]/div/div/div[3]/div[3]/ul")
+    if link_recurso != "":
+        etiquetas = scrap_labels(
+            driver_, enlace_web, "/html/body/div[7]/div[2]/div/div[1]/div[3]/div/div[3]/div/div/div[3]/div[3]/ul")
 
-    # Se anexa el enlace al recurso solicitado
+        # Se anexa el enlace al recurso solicitado
     df.loc[i, 'Enlace_recursos'] = link_recurso
     # Se anexa las etiquetas correspondientes a cada recurso
     df.loc[i, 'Etiquetas'] = etiquetas
