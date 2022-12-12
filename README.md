@@ -13,6 +13,14 @@ Documentación para Selenium
 * [Pandas](https://pypi.org/project/pandas/)
 * [Time](https://pypi.org/project/python-time/)
 
+El web driver de firefox necesita de un token personal de GitHub para superar el límite de peticiones de descarga del mismo. Para generar su token de acceso personal, debe referirse al siguiente [enlace](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token).
+
+Tras obtenersu token de acceso, debe reemplazarlo por el que se encuentra en la línea 35 del [script](seleniumScrapingPOT_OK.py)
+```
+35| os.environ['GH_TOKEN'] = "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"
+```
+
+
 # Conceptos importantes
 * **XPATH:**
 El script hace uso de las etiquetas XPATH para encontrar elementos en un documento HTML.
@@ -45,3 +53,6 @@ Sin embargo, al agregar los comentarios  ***#In[]*** o ***#%%*** y habilitar la 
 ![Ejecucion por celda](https://user-images.githubusercontent.com/36966781/207107538-42bb152c-099f-4533-a2c1-109691ea457d.gif)
 
 Se recomienda emplear este método de ejecución puesto que permite llevar un mejor control sobre la ejecución del script
+
+# Errores conocidos
+* En el ciclo ***for*** que se encuentra en la línea **398**, se obtienen los links de descarga de cada recurso. En la iteración número 42, el Webdriver no consigue cargar el sitio web y por ende, no encuentra el link de descarga del recurso. Se desconoce la causa de esto ya que al ingresar al sitio web que contiene el enlace de descarga mediante un navegador como lo es Chrome o Brave, el sitio web funciona con normalidad
